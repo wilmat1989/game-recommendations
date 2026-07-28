@@ -1,0 +1,53 @@
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Large source and intermediate recommendation data
+all_reviews.csv
+reviews.parquet
+processed_reviews.parquet
+game_edges*.parquet
+game_recommendations.parquet
+recommendation_build.duckdb
+recommendation_build.duckdb.wal
+duckdb_temp/
+data/raw/
+data/serving/*.db
+data/serving/*.db-*
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Local Hermes workspace files
+.hermes/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
