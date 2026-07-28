@@ -5,8 +5,8 @@ enjoy based on a game they already liked. The recommendation objective is
 likelihood of enjoyment, not genre or content similarity.
 
 The current repository contains the processed recommendation artifacts,
-model-building notebooks, and the initial backend project structure. The web
-API and frontend are under development.
+model-building notebooks, and a tested FastAPI backend. The frontend is under
+development.
 
 ## Project Structure
 
@@ -48,3 +48,38 @@ does not replace that third-party notice.
 
 Steam and related marks belong to their respective owners. This project is not
 affiliated with or endorsed by Valve Corporation.
+
+## Local API
+
+Install the locked dependencies:
+
+```bash
+uv sync
+```
+
+Validate the serving data:
+
+```bash
+uv run python scripts/validate_data.py
+```
+
+Run the API:
+
+```bash
+uv run uvicorn game_recommender.app:app --reload
+```
+
+Open `http://localhost:8000/docs` for FastAPI's interactive documentation.
+
+Available endpoints:
+
+- `GET /api/health`
+- `GET /api/games/search?q=portal&limit=10`
+- `GET /api/games/400/recommendations?limit=12`
+
+Run automated checks:
+
+```bash
+uv run pytest
+uv run ruff check .
+```
