@@ -20,13 +20,21 @@ The project author transformed the source data by:
 - iteratively removing games and users below configured review-count thresholds;
 - deduplicating user/game reviews by retaining the newest review;
 - creating a Steam app ID-to-title lookup;
-- calculating Bayesian-smoothed game-pair recommendation rankings; and
+- calculating symmetric Bayesian-smoothed game-pair rankings;
+- calculating directional Bayesian-smoothed game-pair rankings;
+- training a user/game matrix-factorization model and ranking games by cosine
+  similarity between learned game embeddings;
+- exporting an additional precomputed recommendation artifact labeled Peabrain;
+  and
 - exporting compact Parquet artifacts for application use.
 
 The derived files distributed with this repository are:
 
 - `data/game_lookup.parquet`
 - `data/game_recommendation_lists.parquet`
+- `data/game_recommendation_lists_asymmetric.parquet`
+- `data/game_recommendation_lists_matrix.parquet`
+- `data/game_recommendation_lists_peabrain.parquet`
 
 The source dataset's MIT notice is reproduced in
 `licenses/steam-reviews-MIT.txt`. The repository's root `LICENSE` applies to

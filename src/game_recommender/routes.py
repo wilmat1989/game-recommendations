@@ -8,6 +8,7 @@ from game_recommender.models import (
     GameSummary,
     HealthResponse,
     RecommendationItem,
+    RecommendationModel,
     RecommendationResponse,
     SearchResponse,
 )
@@ -57,9 +58,11 @@ def search_games(
     response_model=RecommendationResponse,
 )
 def recommendations(
+    request: Request,
     repository: RepositoryDependency,
     appid: Annotated[int, Path(ge=0)],
     limit: Annotated[int, Query(ge=1, le=30)] = 12,
+    model: Annotated[RecommendationModel, Query()] = "symmetric",
 ) -> RecommendationResponse:
     source = repository.get_game(appid)
     if source is None:
@@ -68,8 +71,9 @@ def recommendations(
             detail="Game not found",
         )
 
-    results = repository.get_recommendations(appid, limit)
+    results = request.app.state.model_repositories[model].get_recommendations(appid, limit)
     return RecommendationResponse(
+        model=model,
         source=GameSummary(appid=source.appid, title=source.title),
         recommendations=[
             RecommendationItem(

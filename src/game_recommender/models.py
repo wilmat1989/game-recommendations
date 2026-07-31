@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+RecommendationModel = Literal["asymmetric", "symmetric", "matrix", "peabrain"]
+
 
 class GameSummary(BaseModel):
     appid: int
@@ -20,6 +22,7 @@ class RecommendationItem(GameSummary):
 
 
 class RecommendationResponse(BaseModel):
+    model: RecommendationModel
     source: GameSummary
     recommendations: list[RecommendationItem]
 

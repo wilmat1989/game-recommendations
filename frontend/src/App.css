@@ -47,6 +47,10 @@
   text-transform: uppercase;
 }
 
+.model-note--debug {
+  color: var(--acid);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -460,6 +464,11 @@
   display: block;
   color: inherit;
   text-decoration: none;
+  transition: opacity 180ms ease;
+}
+
+.game-card.is-played .game-card__link {
+  opacity: 0.52;
 }
 
 .game-card__art {
@@ -579,6 +588,37 @@
 .game-card__link:focus-visible .game-card__open {
   opacity: 1;
   transform: translateX(0);
+}
+
+.game-card__played-toggle {
+  display: inline-flex;
+  margin: 12px 3px 0;
+  padding: 7px 10px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line-bright);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: 500 0.58rem/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.game-card__played-toggle:hover,
+.game-card__played-toggle:focus-visible {
+  border-color: var(--acid-dark);
+  color: var(--ink);
+}
+
+.game-card__played-toggle[aria-pressed='true'] {
+  border-color: rgba(185, 242, 39, 0.38);
+  background: rgba(185, 242, 39, 0.08);
+  color: var(--acid);
 }
 
 .no-results {

@@ -34,6 +34,11 @@ data/raw/
 data/serving/*.db
 data/serving/*.db-*
 
+# Redundant or non-runtime model exports retained locally
+data/game_recommendation_lists_symmetric.parquet
+data/game_recommendations_lists_matrix.parquet
+data/peabrain_game_recommendations.parquet
+
 # Local configuration and secrets
 .env
 .env.*

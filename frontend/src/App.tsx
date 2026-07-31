@@ -1,10 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
 import { getRecommendations, searchGames } from './api'
-import type { GameSummary, RecommendationItem, RecommendationResponse } from './types'
+import type {
+  GameSummary,
+  RecommendationItem,
+  RecommendationModel,
+  RecommendationResponse,
+} from './types'
 import { useDebouncedValue } from './useDebouncedValue'
 import './App.css'
 
 type RequestState = 'idle' | 'loading' | 'success' | 'error'
+const PLAYED_GAME_STORAGE_KEY = 'next-play:played-appids'
+
+function loadPlayedGameIds() {
+  try {
+    const storedValue = window.localStorage.getItem(PLAYED_GAME_STORAGE_KEY)
+    if (!storedValue) return new Set<number>()
+
+    const appids: unknown = JSON.parse(storedValue)
+    if (!Array.isArray(appids)) return new Set<number>()
+
+    return new Set(
+      appids.filter(
+        (appid): appid is number => Number.isSafeInteger(appid) && appid >= 0,
+      ),
+    )
+  } catch {
+    return new Set<number>()
+  }
+}
+
+function persistPlayedGameIds(appids: Set<number>) {
+  try {
+    window.localStorage.setItem(
+      PLAYED_GAME_STORAGE_KEY,
+      JSON.stringify([...appids].sort((left, right) => left - right)),
+    )
+  } catch {
+    // State still works for this session if browser storage is unavailable.
+  }
+}
+
+function getDebugModel(): RecommendationModel | undefined {
+  const model = new URLSearchParams(window.location.search).get('model')
+  return model === 'asymmetric' ||
+    model === 'symmetric' ||
+    model === 'matrix' ||
+    model === 'peabrain'
+    ? model
+    : undefined
+}
 
 function SearchIcon() {
   return (
@@ -32,7 +77,13 @@ function initials(title: string) {
     .join('')
 }
 
-function RecommendationCard({ game }: { game: RecommendationItem }) {
+interface RecommendationCardProps {
+  game: RecommendationItem
+  isPlayed: boolean
+  onPlayedChange: (appid: number) => void
+}
+
+function RecommendationCard({ game, isPlayed, onPlayedChange }: RecommendationCardProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const rank = String(game.rank).padStart(2, '0')
@@ -40,7 +91,7 @@ function RecommendationCard({ game }: { game: RecommendationItem }) {
   const imageUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg`
 
   return (
-    <article className="game-card">
+    <article className={isPlayed ? 'game-card is-played' : 'game-card'}>
       <a
         className="game-card__link"
         href={steamUrl}
@@ -72,11 +123,22 @@ function RecommendationCard({ game }: { game: RecommendationItem }) {
           <p>Steam app {game.appid}</p>
         </div>
       </a>
+      <button
+        className="game-card__played-toggle"
+        type="button"
+        aria-label={`Mark ${game.title} as ${isPlayed ? 'not played' : 'played'}`}
+        aria-pressed={isPlayed}
+        onClick={() => onPlayedChange(game.appid)}
+      >
+        <span aria-hidden="true">{isPlayed ? '✓' : '+'}</span>
+        {isPlayed ? 'Played' : 'Mark as played'}
+      </button>
     </article>
   )
 }
 
 function App() {
+  const debugModel = getDebugModel()
   const [query, setQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState<GameSummary | null>(null)
   const [searchResults, setSearchResults] = useState<GameSummary[]>([])
@@ -88,7 +150,9 @@ function App() {
   const [recommendationData, setRecommendationData] =
     useState<RecommendationResponse | null>(null)
   const [recommendationMessage, setRecommendationMessage] = useState('')
+  const [playedGameIds, setPlayedGameIds] = useState(loadPlayedGameIds)
   const searchRequestGeneration = useRef(0)
+  const recommendationRequestGeneration = useRef(0)
   const debouncedQuery = useDebouncedValue(query, 250)
 
   useEffect(() => {
@@ -128,6 +192,7 @@ function App() {
   }, [debouncedQuery, query, selectedGame])
 
   useEffect(() => {
+    const requestGeneration = ++recommendationRequestGeneration.current
     if (!selectedGame) return
 
     const controller = new AbortController()
@@ -135,19 +200,21 @@ function App() {
     setRecommendationData(null)
     setRecommendationMessage('')
 
-    getRecommendations(selectedGame.appid, 12, controller.signal)
+    getRecommendations(selectedGame.appid, 12, controller.signal, debugModel)
       .then((response) => {
+        if (requestGeneration !== recommendationRequestGeneration.current) return
         setRecommendationData(response)
         setRecommendationState('success')
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
+        if (requestGeneration !== recommendationRequestGeneration.current) return
         setRecommendationState('error')
         setRecommendationMessage('Recommendations could not be loaded. Please try again.')
       })
 
     return () => controller.abort()
-  }, [selectedGame])
+  }, [debugModel, selectedGame])
 
   function updateQuery(value: string) {
     searchRequestGeneration.current += 1
@@ -158,6 +225,7 @@ function App() {
     setSearchOpen(true)
     setActiveResult(-1)
     if (selectedGame && value !== selectedGame.title) {
+      recommendationRequestGeneration.current += 1
       setSelectedGame(null)
       setRecommendationData(null)
       setRecommendationState('idle')
@@ -166,15 +234,18 @@ function App() {
 
   function selectGame(game: GameSummary) {
     searchRequestGeneration.current += 1
+    recommendationRequestGeneration.current += 1
     setSelectedGame(game)
     setQuery(game.title)
     setSearchOpen(false)
     setSearchResults([])
+    setSearchState('idle')
     setActiveResult(-1)
   }
 
   function clearSelection() {
     searchRequestGeneration.current += 1
+    recommendationRequestGeneration.current += 1
     setQuery('')
     setSelectedGame(null)
     setSearchResults([])
@@ -182,6 +253,19 @@ function App() {
     setSearchState('idle')
     setRecommendationData(null)
     setRecommendationState('idle')
+  }
+
+  function togglePlayedGame(appid: number) {
+    setPlayedGameIds((currentAppids) => {
+      const nextAppids = new Set(currentAppids)
+      if (nextAppids.has(appid)) {
+        nextAppids.delete(appid)
+      } else {
+        nextAppids.add(appid)
+      }
+      persistPlayedGameIds(nextAppids)
+      return nextAppids
+    })
   }
 
   function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -212,6 +296,12 @@ function App() {
   const showDropdown =
     searchOpen && query.trim().length >= 2 && (searchState !== 'idle' || searchResults.length > 0)
   const recommendationCount = recommendationData?.recommendations.length ?? 0
+  const orderedRecommendations = recommendationData
+    ? [
+        ...recommendationData.recommendations.filter((game) => !playedGameIds.has(game.appid)),
+        ...recommendationData.recommendations.filter((game) => playedGameIds.has(game.appid)),
+      ]
+    : []
 
   return (
     <div className="app-shell">
@@ -222,9 +312,9 @@ function App() {
           </span>
           <span>NEXT PLAY</span>
         </a>
-        <div className="model-note">
+        <div className={debugModel ? 'model-note model-note--debug' : 'model-note'}>
           <span className="status-dot" aria-hidden="true" />
-          Review-powered recommendations
+          {debugModel ? `Debug model: ${debugModel}` : 'Review-powered recommendations'}
         </div>
       </header>
 
@@ -399,8 +489,13 @@ function App() {
 
               {recommendationCount > 0 ? (
                 <div className="recommendation-grid">
-                  {recommendationData.recommendations.map((game) => (
-                    <RecommendationCard key={game.appid} game={game} />
+                  {orderedRecommendations.map((game) => (
+                    <RecommendationCard
+                      key={game.appid}
+                      game={game}
+                      isPlayed={playedGameIds.has(game.appid)}
+                      onPlayedChange={togglePlayedGame}
+                    />
                   ))}
                 </div>
               ) : (
@@ -416,8 +511,8 @@ function App() {
 
       <footer>
         <p>
-          Built from co-review patterns. Recommendations estimate what you may enjoy next — not
-          what looks most similar.
+          Built from player review patterns. Recommendations estimate what you may enjoy next —
+          not what looks most similar.
         </p>
         <p>Independent portfolio project · Not affiliated with Valve</p>
       </footer>

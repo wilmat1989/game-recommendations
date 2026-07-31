@@ -1,4 +1,4 @@
-import type { RecommendationResponse, SearchResponse } from './types'
+import type { RecommendationModel, RecommendationResponse, SearchResponse } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -43,8 +43,10 @@ export function getRecommendations(
   appid: number,
   limit = 12,
   signal?: AbortSignal,
+  model?: RecommendationModel,
 ): Promise<RecommendationResponse> {
   const params = new URLSearchParams({ limit: String(limit) })
+  if (model) params.set('model', model)
   return requestJson<RecommendationResponse>(
     `/api/games/${appid}/recommendations?${params}`,
     signal,

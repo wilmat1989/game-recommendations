@@ -26,7 +26,7 @@ def test_recommendations_preserve_rank_and_omit_unknown_titles(
 
     assert [(game.appid, game.title, game.rank) for game in results] == [
         (300, "Other Game", 1),
-        (200, "Portal", 2),
+        (200, "Portal", 3),
     ]
 
 

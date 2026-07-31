@@ -30,7 +30,7 @@ def parquet_files(tmp_path: Path) -> tuple[Path, Path]:
         {
             "appid": pa.array([100, 200, 777], type=pa.uint32()),
             "recommendations": pa.array(
-                [[300, 200, 999], [201, 300], [200]],
+                [[300, 999, 200], [201, 300], [200]],
                 type=pa.list_(pa.uint32()),
             ),
         }
